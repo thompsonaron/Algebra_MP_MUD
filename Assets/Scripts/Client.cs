@@ -39,6 +39,17 @@ public class Client : MonoBehaviour
 
     private void Client_OnMessage(object sender, MessageEventArgs e)
     {
+        // if is data treat it as world
+        if (e.IsBinary)
+        {
+
+        }
+        // this is probably for messaging
+        if (e.IsText)
+        {
+
+        }
+
         Debug.Log(e.Data);
         messages.Add(e.Data);
         //textMessage.text += e.Data;
@@ -68,6 +79,16 @@ public class Client : MonoBehaviour
     {
         client.Send("#msg:" + messagingField.text);
         messagingField.text = string.Empty;
+
+        // TODO project stuff
+        client.Send("#plyMove:" + messagingField.text);
+        // 1. Send the position
+        // 2. event of WASD
+            // 2. #plyMove: 1000 W was up
+            // 2. #plyMove: 2000 W was down
+            // 2. #plyMove: 0100 A was up
+            // 2. #plyMove: 0200 A was up
+        // 3. send player position serialized ()
     }
 
 }

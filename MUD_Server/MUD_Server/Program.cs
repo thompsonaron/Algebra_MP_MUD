@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using WebSocketSharp;
@@ -25,12 +26,21 @@ namespace MUD_Server
 
     public class Chatroom : WebSocketBehavior
     {
+        byte[] world;
+        // 1 0 0 0 0 1
+        // 0 0 0 0 1 0
+        //  0 0 0 0 1
+
+        List<Player> players;
+
+
         // first string is Uri (meaning ws://localhost:8080/ChatroomA or B or wotever
         // Dictionary<string, string> is <user.ID, user.name>
        static Dictionary<string, Dictionary<string, string>> users = new Dictionary<string, Dictionary<string, string>>();
         protected override void OnOpen()
         {
             //Console.WriteLine(Context.RequestUri);
+            Send(world);
             base.OnOpen();
         }
 
@@ -40,6 +50,7 @@ namespace MUD_Server
             // user.ID, user.name
             Dictionary<string, string> chatroom = null;
             // if there is chatroom with users just set it to this
+            // i need this only for multiple chatrooms
             if (!users.ContainsKey(Context.RequestUri.ToString()))
             {
                 users[Context.RequestUri.ToString()] = new Dictionary<string, string>();
@@ -56,7 +67,7 @@ namespace MUD_Server
             {
                 chatroom[ID] = e.Data.Substring(6);
             }
-            else
+            else if(e.Data.StartsWith("#msg:"))
             {
                 // else 
                 // if e.Data starts with "#msg:" then send message to everybody
@@ -69,6 +80,19 @@ namespace MUD_Server
                     // user.Key is ID
                     Sessions.SendTo(msg, user.Key);
                 };
+            }
+            else if (e.Data.StartsWith("#plyMove:"))
+            {
+                string move = e.Data.Substring(9);
+                char W = move[0];
+                char A = move[1];
+                char S = move[2];
+                char D = move[3];
+
+                if (W == '1')
+                {
+                    // he moved up
+                }
             }
             base.OnMessage(e);
         }
@@ -98,5 +122,12 @@ namespace MUD_Server
     {
         public string ID;
         public string name;
+    }
+
+    public class Player
+    {
+        string ID;
+        int x;
+        int y;
     }
 }

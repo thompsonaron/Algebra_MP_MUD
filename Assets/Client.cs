@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.PlayerLoop;
 using UnityEngine.UI;
 using WebSocketSharp;
@@ -33,6 +34,8 @@ public class Client : MonoBehaviour
 
     List<MessageEventArgs> serverMessages = new List<MessageEventArgs>();
 
+    private bool writingMessage = false;
+
     private void Update()
     {
         lock (serverMessages)
@@ -50,69 +53,34 @@ public class Client : MonoBehaviour
                     }
                     else
                     {
-                        //Player c = new Player();
-                        //c = s.DeserializePlayer(msg.RawData);
-                        //Debug.Log(c.nick);
-
                         players = s.DeserializePlayers(msg.RawData);
-
-                        foreach (var item in players.players)
-                        {
-                            Debug.Log(item.nick);
-                        }
 
                         // Position players
                         PositionPlayers();
                     }
                 }
-                // this is probably for messaging
+                // if msg is string
                 if (msg.IsText)
                 {
                     messages.Add(msg.Data);
                 }
 
-                //Debug.Log(e.Data);
-                //textMessage.text += e.Data;
                 foreach (var message in messages)
                 {
-                    textMessage.text += message;
+                    textMessage.text += message + Environment.NewLine;
                 }
             }
             messages.Clear();
             serverMessages.Clear();
         }
 
-        //If the input field is focused, change its color to green.
-        //if (messagingField.isFocused == true)
-        //{
-            
-        //}
-        //else
-        //{
-
-        //}
-
-        //if (Input.GetKeyDown(KeyCode.W))
-        //{
-
-        //}
-        //if (Input.GetKeyDown(KeyCode.S))
-        //{
-
-        //}
-        //if (Input.GetKeyDown(KeyCode.A))
-        //{
-
-        //}
-        //if (Input.GetKeyDown(KeyCode.D))
-        //{
-
-        //}
+        
+        if (messagingField.isFocused == true){writingMessage = true;}
+        else{writingMessage = false;}
     }
 
     private void PositionPlayers()
     {
-        // TODO remove all player objects then add them back in when instantiating
         if (playerObjects.Count > 0)
         {
             foreach (var item in playerObjects)
@@ -130,13 +98,16 @@ public class Client : MonoBehaviour
 
     public void JoinChatroom(string chatroomPath)
     {
-        client = new WebSocket("ws://localhost:8080/" + chatroomPath);
-        client.OnOpen += Client_OnOpen;
-        client.OnMessage += Client_OnMessage;
-        client.Connect();
+        if (inputName.text.Trim() != string.Empty)
+        {
+            client = new WebSocket("ws://localhost:8080/" + chatroomPath);
+            client.OnOpen += Client_OnOpen;
+            client.OnMessage += Client_OnMessage;
+            client.Connect();
 
-        foreach (var button in inputs) { button.SetActive(false); }
-        foreach (var button in messagingObj) { button.SetActive(true); }
+            foreach (var button in inputs) { button.SetActive(false); }
+            foreach (var button in messagingObj) { button.SetActive(true); }
+        }
 
     }
 
@@ -189,18 +160,11 @@ public class Client : MonoBehaviour
 
     public void SendText()
     {
-        client.Send("#msg:" + messagingField.text);
-        messagingField.text = string.Empty;
-
-        //// TODO project stuff
-        //client.Send("#plyMove:" + messagingField.text);
-        //// 1. Send the position
-        //// 2. event of WASD
-        //// 2. #plyMove: 1000 W was up
-        //// 2. #plyMove: 2000 W was down
-        //// 2. #plyMove: 0100 A was up
-        //// 2. #plyMove: 0200 A was up
-        //// 3. send player position serialized ()
+        if (messagingField.text.Trim() != string.Empty)
+        {
+            client.Send("#msg:" + messagingField.text);
+            messagingField.text = string.Empty;
+        }
     }
 
     bool moveReady = true;
@@ -209,10 +173,13 @@ public class Client : MonoBehaviour
         Event e = Event.current;
         if (e.isKey)
         {
-            if (!worldLoaded || !moveReady)
+            if (e.keyCode == KeyCode.Return && writingMessage)
             {
-                return;
+                SendText();
+                messagingField.ActivateInputField();
             }
+
+            if (!worldLoaded || !moveReady || writingMessage) { return; }
 
             moveReady = false;
 
@@ -238,7 +205,7 @@ public class Client : MonoBehaviour
 
             IEnumerator KeyCooldown()
             {
-                yield return new WaitForSeconds(0.1f);
+                yield return new WaitForSeconds(0.3f);
                 moveReady = true;
             }
         }

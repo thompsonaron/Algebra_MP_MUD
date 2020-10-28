@@ -18,6 +18,7 @@ namespace MUD_Server
             // server.AddWebSocketService<Chatroom>("/ChatroomB");
 
             server.Start();
+            Console.WriteLine("Server running");
             while (true) { }
         }
     }
@@ -25,32 +26,16 @@ namespace MUD_Server
 
     public class Chatroom : WebSocketBehavior
     {
+        Serializator ser = new Serializator();
         static World wrld = new World();
-
-        Serializator s = new Serializator();
-
-        //static List<Player> players = new List<Player>();
         static Players players = new Players();
-        
-
-
 
         // first string is Uri (meaning ws://localhost:8080/ChatroomA or B or wotever
-        // Dictionary<string, string> is <user.ID, user.name>
-        //static Dictionary<string, Dictionary<string, string>> users = new Dictionary<string, Dictionary<string, string>>();
         static Dictionary<string, Dictionary<string, Player>> users = new Dictionary<string, Dictionary<string, Player>>();
         protected override void OnOpen()
         {
-            //Console.WriteLine(Context.RequestUri);
-            Console.WriteLine(wrld.ground[19]);
-
-            byte[] vs = new byte[] { 1 };
-
-            // TODO SENDING WORLD
-            Send(s.serialize(wrld));
-            // Send(vs);
-            Console.WriteLine("Sent world");
-
+            // Sending world
+            Send(ser.serialize(wrld));
             base.OnOpen();
         }
 
@@ -72,7 +57,7 @@ namespace MUD_Server
             chatroom = users[Context.RequestUri.ToString()];
 
             // Context is contained within WebSocketBehavior class and .RequestUri checks full Uri, e.g.:ws://localhost:8080/ChatroomA
-            //Console.WriteLine(Context.RequestUri);
+            // Console.WriteLine(Context.RequestUri);
 
             // MINI PROTOCOL
             // if e.Data starts with "#name:" then set name
@@ -89,8 +74,8 @@ namespace MUD_Server
                     {
                         int rndPos = random.Next(10, wrld.ground.Length - 12);
 
-                        // if position is on edges - skip
-                        if (rndPos % 10  == 0 || (rndPos - 9)% 10 == 0)
+                        // if position is on edges -> skip
+                        if (rndPos % 10 == 0 || (rndPos - 9) % 10 == 0)
                         {
                             continue;
                         }
@@ -106,45 +91,38 @@ namespace MUD_Server
                         }
                     }
                 }
-             
+
                 PositionPlayer(ID);
                 chatroom[ID] = p;
                 players.players.Add(p);
 
-
-                Player pl = new Player();
-                pl.ID = "22";
-                pl.nick = "arr";
-                pl.position = 14;
-                players.players.Add(pl);
-
-                //Sessions.Broadcast(s.serialize(p));
-                Sessions.Broadcast(s.serialize(players));
+                Sessions.Broadcast(ser.serialize(players));
             }
             else if (e.Data.StartsWith("#msg:"))
             {
-                // else 
-                // if e.Data starts with "#msg:" then send message to everybody
-
-                var msg = e.Data.Substring(5);
+                Player tempPlayer = new Player();
+                foreach (var p in players.players)
+                {
+                    if (ID == p.ID)
+                    {
+                        tempPlayer = p;
+                        break;
+                    }
+                }
+                var msg = tempPlayer.nick + ": " + e.Data.Substring(5);
                 Console.WriteLine(msg);
                 // sending message to all clients
                 foreach (var user in chatroom)
                 {
-                    // user.Key is ID
-                   // Sessions.SendTo(msg, user.Key);
+                    //user.Key is ID
+                   Sessions.SendTo(msg, user.Key);
                 };
             }
             else if (e.Data.StartsWith("#plyMove:"))
             {
                 string move = e.Data.Substring(9);
-                //char W = move[0];
-                //char A = move[1];
-                //char S = move[2];
-                //char D = move[3];
 
                 Player tempPlayer = new Player();
-
                 foreach (var p in players.players)
                 {
                     if (ID == p.ID)
@@ -164,9 +142,9 @@ namespace MUD_Server
                     if (tempPlayer.position + 10 < wrld.ground.Length - 10)
                     {
                         tempPlayer.position += 10;
-                        Sessions.Broadcast(s.serialize(players));
+                        Sessions.Broadcast(ser.serialize(players));
                     }
-                    
+
                 }
                 else if (move == "S")
                 {
@@ -178,7 +156,7 @@ namespace MUD_Server
                     if (tempPlayer.position - 10 > 10)
                     {
                         tempPlayer.position -= 10;
-                        Sessions.Broadcast(s.serialize(players));
+                        Sessions.Broadcast(ser.serialize(players));
                     }
                 }
                 else if (move == "A")
@@ -188,10 +166,10 @@ namespace MUD_Server
                         return;
                     }
                     // he moved left
-                    if ((tempPlayer.position -1)% 10 != 0)
+                    if ((tempPlayer.position - 1) % 10 != 0)
                     {
                         tempPlayer.position--;
-                        Sessions.Broadcast(s.serialize(players));
+                        Sessions.Broadcast(ser.serialize(players));
                     }
                 }
                 else if (move == "D")
@@ -204,10 +182,9 @@ namespace MUD_Server
                     if ((tempPlayer.position + 1 - 9) % 10 != 0)
                     {
                         tempPlayer.position++;
-                        Sessions.Broadcast(s.serialize(players));
+                        Sessions.Broadcast(ser.serialize(players));
                     }
                 }
-
             }
             base.OnMessage(e);
         }
@@ -218,7 +195,6 @@ namespace MUD_Server
             // check if chatroom exists
             if (!users.ContainsKey(Context.RequestUri.ToString()))
             {
-
                 users[Context.RequestUri.ToString()] = new Dictionary<string, Player>();
             }
             // else create new
@@ -227,6 +203,16 @@ namespace MUD_Server
             if (chatroom.ContainsKey(ID))
             {
                 chatroom.Remove(ID);
+            }
+
+            foreach (var item in players.players)
+            {
+                if (item.ID == ID)
+                {
+                    players.players.Remove(item);
+                    Sessions.Broadcast(ser.serialize(players));
+                    break;
+                }
             }
 
             base.OnClose(e);

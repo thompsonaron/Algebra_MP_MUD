@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
@@ -87,11 +88,21 @@ namespace MUD_Server
                     while (searchingFreeSpot)
                     {
                         int rndPos = random.Next(10, wrld.ground.Length - 12);
-                        if (wrld.ground[rndPos] == 1)
+
+                        // if position is on edges - skip
+                        if (rndPos % 10  == 0 || (rndPos - 9)% 10 == 0)
                         {
-                            searchingFreeSpot = false;
-                            wrld.ground[rndPos] = 2;
-                            p.position = rndPos;
+                            continue;
+                        }
+
+                        p.position = rndPos;
+                        searchingFreeSpot = false;
+                        foreach (var item in players.players)
+                        {
+                            if (rndPos == item.position)
+                            {
+                                searchingFreeSpot = true;
+                            }
                         }
                     }
                 }
@@ -145,6 +156,10 @@ namespace MUD_Server
 
                 if (move == "W")
                 {
+                    if (wrld.ground[tempPlayer.position + 10] == 2)
+                    {
+                        return;
+                    }
                     // he moved up
                     if (tempPlayer.position + 10 < wrld.ground.Length - 10)
                     {
@@ -155,6 +170,10 @@ namespace MUD_Server
                 }
                 else if (move == "S")
                 {
+                    if (wrld.ground[tempPlayer.position - 10] == 2)
+                    {
+                        return;
+                    }
                     // he moved down
                     if (tempPlayer.position - 10 > 10)
                     {
@@ -164,6 +183,10 @@ namespace MUD_Server
                 }
                 else if (move == "A")
                 {
+                    if (wrld.ground[tempPlayer.position - 1] == 2)
+                    {
+                        return;
+                    }
                     // he moved left
                     if ((tempPlayer.position -1)% 10 != 0)
                     {
@@ -173,6 +196,10 @@ namespace MUD_Server
                 }
                 else if (move == "D")
                 {
+                    if (wrld.ground[tempPlayer.position + 1] == 2)
+                    {
+                        return;
+                    }
                     // he moved right
                     if ((tempPlayer.position + 1 - 9) % 10 != 0)
                     {

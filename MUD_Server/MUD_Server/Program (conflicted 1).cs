@@ -24,6 +24,11 @@ namespace MUD_Server
 
     public class Chatroom : WebSocketBehavior
     {
+        //byte[] world;
+        //// 1 0 0 0 0 1
+        //// 0 0 0 0 1 0
+        ////  0 0 0 0 1
+
         static World wrld = new World();
 
         Serializator s = new Serializator();
@@ -45,7 +50,7 @@ namespace MUD_Server
 
             byte[] vs = new byte[] { 1 };
 
-            // TODO SENDING WORLD
+            // TODO
             Send(s.serialize(wrld));
             // Send(vs);
             Console.WriteLine("Sent world");
@@ -55,6 +60,7 @@ namespace MUD_Server
 
         protected override void OnMessage(MessageEventArgs e)
         {
+
             // user.ID, user.name
             Dictionary<string, Player> chatroom = null;
             if (players.players == null)
@@ -71,7 +77,7 @@ namespace MUD_Server
             chatroom = users[Context.RequestUri.ToString()];
 
             // Context is contained within WebSocketBehavior class and .RequestUri checks full Uri, e.g.:ws://localhost:8080/ChatroomA
-            //Console.WriteLine(Context.RequestUri);
+            Console.WriteLine(Context.RequestUri);
 
             // MINI PROTOCOL
             // if e.Data starts with "#name:" then set name
@@ -95,20 +101,36 @@ namespace MUD_Server
                         }
                     }
                 }
-             
                 PositionPlayer(ID);
+                Player ttt = new Player();
+                ttt.nick = "123";
+                ttt.ID = "22";
+                ttt.position = 17;
+                players.players.Add(ttt);
+
+
                 chatroom[ID] = p;
                 players.players.Add(p);
 
+                //Sessions.SendTo(players, ID);
+                //  Sessions.SendTo(s.serialize(wrld), ID);
+                // Console.WriteLine((s.serialize(players)).Length);
+                // foreach (var item in players.players)
+                // {
+                //     Console.WriteLine(item.nick);
+                // }
+                //Sessions.SendTo(s.serialize(players), ID);
 
-                Player pl = new Player();
-                pl.ID = "22";
-                pl.nick = "arr";
-                pl.position = 14;
-                players.players.Add(pl);
+                // Sessions.Broadcast(s.serialize(ttt));
+                var pp = s.serialize(players);
+                Players ssss = new Players();
+                ssss = s.DeserializePlayers(pp);
 
-                //Sessions.Broadcast(s.serialize(p));
-                Sessions.Broadcast(s.serialize(players));
+                foreach (var item in ssss.players)
+                {
+                    Console.WriteLine(item.nick);
+                }
+
             }
             else if (e.Data.StartsWith("#msg:"))
             {
@@ -121,66 +143,36 @@ namespace MUD_Server
                 foreach (var user in chatroom)
                 {
                     // user.Key is ID
-                   // Sessions.SendTo(msg, user.Key);
+                    //Sessions.SendTo(msg, user.Key);
                 };
             }
             else if (e.Data.StartsWith("#plyMove:"))
             {
                 string move = e.Data.Substring(9);
-                //char W = move[0];
-                //char A = move[1];
-                //char S = move[2];
-                //char D = move[3];
+                char W = move[0];
+                char A = move[1];
+                char S = move[2];
+                char D = move[3];
 
-                Player tempPlayer = new Player();
-
-                foreach (var p in players.players)
-                {
-                    if (ID == p.ID)
-                    {
-                        tempPlayer = p;
-                        break;
-                    }
-                }
-
-                if (move == "W")
+                if (W == '1')
                 {
                     // he moved up
-                    if (tempPlayer.position + 10 < wrld.ground.Length - 10)
-                    {
-                        tempPlayer.position += 10;
-                        Sessions.Broadcast(s.serialize(players));
-                    }
-                    
-                }
-                else if (move == "S")
-                {
-                    // he moved down
-                    if (tempPlayer.position - 10 > 10)
-                    {
-                        tempPlayer.position -= 10;
-                        Sessions.Broadcast(s.serialize(players));
-                    }
-                }
-                else if (move == "A")
-                {
-                    // he moved left
-                    if ((tempPlayer.position -1)% 10 != 0)
-                    {
-                        tempPlayer.position--;
-                        Sessions.Broadcast(s.serialize(players));
-                    }
-                }
-                else if (move == "D")
-                {
-                    // he moved right
-                    if ((tempPlayer.position + 1 - 9) % 10 != 0)
-                    {
-                        tempPlayer.position++;
-                        Sessions.Broadcast(s.serialize(players));
-                    }
-                }
 
+                }
+                else if (A == '1')
+                {
+                    // moved left
+
+                }
+                else if (S == '1')
+                {
+                    // moved down
+
+                }
+                else if (D == '1')
+                {
+                    // moved right
+                }
             }
             base.OnMessage(e);
         }
